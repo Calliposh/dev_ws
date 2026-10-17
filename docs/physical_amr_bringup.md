@@ -92,7 +92,8 @@ On the Jetson host, inspect the connected devices using:
 
 ```bash
 ls -l /dev/serial/by-id/
-ls -l /dev/ttyUSB*```
+ls -l /dev/ttyUSB*
+```
 
 ## 5. Jetson Nano Startup
 
@@ -187,25 +188,123 @@ Verify that both files were created before proceeding.
 
 The repository already contains `worlds/my_slam_map.pgm` and `worlds/my_slam_map.yaml`. These are existing map files; do not assume they contain the latest physical map.
 
-### 7.3 Prepare for Localization and Navigation
+### 7.3 AMCL and Nav2
 
-After mapping is complete, stop the SLAM Toolbox process before starting the localization and navigation stack.
+AMCL and Nav2 run on the laptop, while the Jetson Nano handles the hardware-facing ROS 2 nodes.
 
-AMCL is used to estimate the robot's position on an existing map. Nav2 uses that localization, together with odometry and sensor data, to plan and execute navigation goals.
+The laptop uses ROS 2 Humble and communicates with the Jetson Nano through ROS 2 networking.
 
-The laptop must have the required Nav2 packages installed and a valid configuration file.
+#### Start the ROS 2 Environment
 
-The intended localization and navigation workflow is:
+Open a terminal on the laptop and run:
 
-1. Start the robot description and ensure the required transforms are available.
-2. Start AMCL using the saved map and a valid localization configuration.
-3. Start the Nav2 navigation stack using a verified Nav2 configuration.
-4. Set an initial pose in RViz if required.
-5. Send a navigation goal and monitor the robot and navigation status.
+`source /opt/ros/humble/setup.bash`
+
+`source ~/dev_ws/install/setup.bash`
+
+Set the ROS 2 environment:
+
+`export ROS_DOMAIN_ID=10`
+
+`export ROS_LOCALHOST_ONLY=0`
+
+The previously recorded middleware setting was:
+
+`export RMW_IMPLEMENTATION=rmw_fastrtps_cpp`
+
+#### Launch Nav2
+
+The previously recorded Nav2 launch command was:
+
+`ros2 launch my_robot_description nav2.launch.py`
+
+This launch workflow was used to start the navigation stack, including AMCL.
+
+The launch file and its configuration must be checked to confirm that all required nodes and parameters are available.
+
+The previously recorded Nav2 configuration path was:
+
+`~/dev_ws/src/my_robot_description/config/nav2_params.yaml`
+
+Earlier testing encountered configuration errors involving lifecycle nodes and local-costmap parameters. Therefore, this configuration must be verified before the navigation stack is considered ready for physical operation.
+
+#### Initialize AMCL
+
+AMCL estimates the robot's position on an existing map.
+
+After starting the navigation stack:
+
+1. Open RViz.
+2. Confirm that the saved map is visible.
+3. Select the `2D Pose Estimate` tool.
+4. Click the robot's approximate position on the map and drag to indicate its orientation.
+5. Confirm that the laser scan aligns with the map.
+
+AMCL requires an initial pose estimate before it can reliably localize the robot.
+
+#### Verify AMCL and Nav2
+
+Inspect the active ROS 2 nodes:
+
+`ros2 node list`
+
+Expected nodes may include:
+
+- `/amcl`
+- `/map_server`
+- `/planner_server`
+- `/controller_server`
+- `/bt_navigator`
+- `/lifecycle_manager_navigation`
+
+The exact node names depend on the launch configuration.
+
+Inspect the available topics:
+
+`ros2 topic list`
+
+Check the estimated robot pose:
+
+`ros2 topic echo /amcl_pose --once`
+
+Check the map topic:
+
+`ros2 topic echo /map --once`
+
+These checks help verify that localization and map data are being published. They do not, by themselves, prove that the complete navigation stack is operational.
+
+#### Known Navigation Issues
+
+Previous testing encountered the following issues:
+
+- Nav2 timed out while waiting for a transform between `map` and `base_footprint`.
+- AMCL required an initial pose estimate before publishing a valid localized pose.
+- Nav2 configuration errors involving lifecycle nodes and local-costmap parameters were encountered.
+
+Before attempting autonomous navigation, verify the transform tree, map availability, AMCL localization, lifecycle states, and Nav2 configuration.
+
+The Jetson Nano should continue running the hardware-facing nodes, including the Arduino bridge, wheel odometry, and YDLIDAR driver. SLAM Toolbox, AMCL, and Nav2 belong on the laptop in this setup.
+
+The launch command and configuration described here reflect the previously recorded workflow. The complete navigation stack must be tested again before it is described as fully operational.
 
 ### 7.4 Extended Kalman Filter (EKF)
 
-An EKF may be used to combine wheel odometry with other motion measurements
+The ROS 2 `robot_localization` package was installed and its EKF node was manually tested during development.
+
+The previously recorded configuration file was:
+
+`~/dev_ws/src/my_robot_description/config/ekf.yaml`
+
+On the laptop, the EKF can be started using:
+
+`ros2 run robot_localization ekf_node --ros-args --params-file ~/dev_ws/src/my_robot_description/config/ekf.yaml`
+
+The configuration must be checked against the sensors and topics available on the physical robot before use.
+
+The MPU6050 IMU was disabled during the recorded baseline tests.
+
+The EKF and wheel-odometry configuration must also be coordinated to prevent multiple nodes from publishing the same `odom → base_footprint` transform.
+
 ## 8. Coordinate Frames
 
 The physical robot uses the following expected transform chain:
@@ -217,8 +316,6 @@ The map and odometry frames are used by the mapping and navigation stack.
 The robot description defines a fixed joint between `base_footprint` and `base_link`, with a vertical offset of `0.06 m`.
 
 The robot state publisher should publish this fixed transform when the robot description is loaded.
-
-Avoid publishing duplicate static transforms for the same parent and child frames.
 
 Before running SLAM, AMCL, or Nav2, verify that the required transforms are available and that the LiDAR scan aligns with the robot model in RViz.
 
