@@ -203,12 +203,9 @@ The intended localization and navigation workflow is:
 4. Set an initial pose in RViz if required.
 5. Send a navigation goal and monitor the robot and navigation status.
 
-The exact AMCL and Nav2 launch commands depend on the installed launch files and their parameters. They must be verified against the laptop workspace before being treated as tested commands.
-
 ### 7.4 Extended Kalman Filter (EKF)
 
-An EKF may be used to combine wheel odometry with other motion measurements, but the exact EKF configuration and launch command used in the physical setup have not been confirmed.
-
+An EKF may be used to combine wheel odometry with other motion measurements
 ## 8. Coordinate Frames
 
 The physical robot uses the following expected transform chain:
