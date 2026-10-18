@@ -16,11 +16,7 @@ def generate_launch_description():
         'nav2_bringup'
     )
 
-    default_map = os.path.join(
-        package_dir,
-        'worlds',
-        'my_slam_map.yaml'
-    )
+    default_map = os.path.expanduser('~/amr_map.yaml')
 
     default_params = os.path.join(
         package_dir,
