@@ -15,13 +15,14 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='amr_user',
+    maintainer='AMR Developer',
     maintainer_email='user@example.com',
     description='ROS 2 hardware interface for an autonomous mobile robot',
-    license='TODO',
+    license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'nano_bridge = amr_hardware.nano_bridge:main',
         ],
     },
 )
