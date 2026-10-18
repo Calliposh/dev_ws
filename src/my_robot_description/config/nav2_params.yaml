@@ -61,7 +61,7 @@ controller_server:
       plugin: "dwb_core::DWBLocalPlanner"
       min_vel_x: 0.0
       max_vel_x: 0.20
-      min_vel_theta: 0.0
+      min_vel_theta: -0.8
       max_vel_theta: 0.8
       acc_lim_x: 0.5
       decel_lim_x: -0.5
@@ -213,7 +213,7 @@ velocity_smoother:
     scale_velocities: false
     feedback: "OPEN_LOOP"
     max_velocity: [0.20, 0.0, 0.8]
-    min_velocity: [0.0, 0.0, -0.8]
+    min_velocity: [-0.10, 0.0, -0.8]
     max_accel: [0.5, 0.0, 1.0]
     max_decel: [-0.5, 0.0, -1.0]
     odom_topic: "odom"
