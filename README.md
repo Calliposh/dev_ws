@@ -69,3 +69,14 @@ source /opt/ros/humble/setup.bash
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
 source install/setup.bash
+```
+
+## Validation Status
+
+The repository contains the configuration and launch files for the
+AMR's hardware interface, physical mapping, localization, and navigation.
+
+The latest EKF integration has been reviewed at the source level but
+has not been runtime-tested after these changes. Before deployment,
+build the workspace in a ROS 2 Humble environment and verify the EKF,
+distributed ROS 2 communication, TF tree, and autonomous navigation.
