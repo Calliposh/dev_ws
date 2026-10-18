@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 
+import math
 import time
 
 import rclpy
 import serial
 
 from rclpy.node import Node
+from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32, Float32
 
 
 class NanoBridge(Node):
-    """Read encoder and ultrasonic measurements from the Arduino."""
 
     def __init__(self):
         super().__init__('nano_bridge')
@@ -19,15 +20,10 @@ class NanoBridge(Node):
         self.declare_parameter('baud_rate', 115200)
 
         self.serial_port = (
-            self.get_parameter('serial_port')
-            .get_parameter_value()
-            .string_value
+            self.get_parameter('serial_port').value
         )
-
         self.baud_rate = (
-            self.get_parameter('baud_rate')
-            .get_parameter_value()
-            .integer_value
+            self.get_parameter('baud_rate').value
         )
 
         self.ser = None
@@ -51,21 +47,25 @@ class NanoBridge(Node):
             Float32, '/nano/ultrasonic_right', 10
         )
 
-        # Keep serial reads bounded so the ROS node can recover
-        # instead of blocking indefinitely.
+        self.cmd_vel_sub = self.create_subscription(
+            Twist,
+            '/cmd_vel',
+            self.cmd_vel_callback,
+            10
+        )
+
         self.timer = self.create_timer(0.01, self.read_serial)
 
         self.connect_serial()
 
     def connect_serial(self):
-        """Open or reopen the Arduino serial connection."""
         if self.ser is not None:
             try:
                 self.ser.close()
-            except serial.SerialException:
+            except (serial.SerialException, OSError):
                 pass
 
-            self.ser = None
+        self.ser = None
 
         try:
             self.ser = serial.Serial(
@@ -74,9 +74,7 @@ class NanoBridge(Node):
                 timeout=0.01
             )
 
-            # Allow the serial connection to settle.
             time.sleep(0.2)
-
             self.ser.reset_input_buffer()
 
             self.get_logger().info(
@@ -85,21 +83,45 @@ class NanoBridge(Node):
             )
 
         except (serial.SerialException, OSError) as exc:
-            self.ser = None
-            self.log_error(
-                f'Cannot open {self.serial_port}: {exc}'
-            )
+            self.log_error(f'Serial connection failed: {exc}')
 
     def log_error(self, message):
-        """Avoid flooding the terminal with repeated errors."""
         now = time.monotonic()
 
         if now - self.last_error_time >= 5.0:
             self.get_logger().warning(message)
             self.last_error_time = now
 
+    def cmd_vel_callback(self, msg):
+        """Forward ROS velocity commands using the documented format."""
+        if self.ser is None or not self.ser.is_open:
+            return
+
+        linear_velocity = msg.linear.x
+        angular_velocity = msg.angular.z
+
+        if not (
+            math.isfinite(linear_velocity)
+            and math.isfinite(angular_velocity)
+        ):
+            self.get_logger().warning(
+                'Ignoring non-finite velocity command'
+            )
+            return
+
+        # Previously documented command format: CMD,v,w
+        command = (
+            f'CMD,{linear_velocity:.4f},'
+            f'{angular_velocity:.4f}\n'
+        )
+
+        try:
+            self.ser.write(command.encode('ascii'))
+        except (serial.SerialException, OSError) as exc:
+            self.log_error(f'Failed to send motor command: {exc}')
+            self.ser = None
+
     def read_serial(self):
-        """Read and publish one five-field CSV packet."""
         if self.ser is None or not self.ser.is_open:
             self.connect_serial()
             return
@@ -114,9 +136,8 @@ class NanoBridge(Node):
 
             fields = line.split(',')
 
-            # Expected format:
-            # leftCount,rightCount,leftDistance,
-            # frontDistance,rightDistance
+            # Expected Arduino sensor packet:
+            # leftCount,rightCount,leftDistance,frontDistance,rightDistance
             if len(fields) != 5:
                 return
 
@@ -129,42 +150,33 @@ class NanoBridge(Node):
                 right_distance = float(fields[4].strip())
 
             except ValueError:
-                # Ignore startup messages or malformed packets.
                 return
 
             values = [
-                left_count,
-                right_count,
                 left_distance,
                 front_distance,
                 right_distance
             ]
 
-            # Reject non-finite sensor readings.
-            import math
-
-            if not all(math.isfinite(value) for value in values):
+            if not all(math.isfinite(v) for v in values):
                 return
 
-            left_encoder_msg = Int32()
-            left_encoder_msg.data = left_count
-            self.left_encoder_pub.publish(left_encoder_msg)
+            self.left_encoder_pub.publish(
+                Int32(data=left_count)
+            )
+            self.right_encoder_pub.publish(
+                Int32(data=right_count)
+            )
 
-            right_encoder_msg = Int32()
-            right_encoder_msg.data = right_count
-            self.right_encoder_pub.publish(right_encoder_msg)
-
-            left_msg = Float32()
-            left_msg.data = left_distance
-            self.left_ultrasonic_pub.publish(left_msg)
-
-            front_msg = Float32()
-            front_msg.data = front_distance
-            self.front_ultrasonic_pub.publish(front_msg)
-
-            right_msg = Float32()
-            right_msg.data = right_distance
-            self.right_ultrasonic_pub.publish(right_msg)
+            self.left_ultrasonic_pub.publish(
+                Float32(data=left_distance)
+            )
+            self.front_ultrasonic_pub.publish(
+                Float32(data=front_distance)
+            )
+            self.right_ultrasonic_pub.publish(
+                Float32(data=right_distance)
+            )
 
             self.packet_count += 1
 
@@ -193,7 +205,6 @@ class NanoBridge(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-
     node = NanoBridge()
 
     try:
