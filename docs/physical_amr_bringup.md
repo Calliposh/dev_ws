@@ -252,17 +252,40 @@ The following issues were met while setting up Nav2 and were resolved before the
 
 ### 7.4 Extended Kalman Filter (EKF)
 
-The `robot_localization` EKF node fuses the motion estimates to refine the odometry used for localisation.
+The physical robot uses wheel-encoder odometry as the EKF input. The MPU6050 IMU is disabled and is not fused.
 
-Configuration: `~/dev_ws/src/my_robot_description/config/ekf.yaml`
+The EKF configuration is stored in:
 
-On the laptop:
+`src/my_robot_description/config/ekf.yaml`
+
+The launch file is:
+
+`src/my_robot_description/launch/ekf.launch.py`
+
+On the laptop, source the ROS 2 and workspace environments:
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/dev_ws/install/setup.bash
+export ROS_DOMAIN_ID=10
+export ROS_LOCALHOST_ONLY=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+```
+
+Start the EKF:
 
 ```
-ros2 run robot_localization ekf_node --ros-args --params-file ~/dev_ws/src/my_robot_description/config/ekf.yaml
+ros2 launch my_robot_description ekf.launch.py
+```
+On the Jetson, run the wheel-odometry launch file so raw encoder odometry is published on /wheel/odom without publishing a competing odometry transform:
+
+```
+ros2 launch amr_hardware wheel_odom.launch.py
 ```
 
-Only one node may publish the `odom → base_footprint` transform, so the EKF and wheel-odometry settings must be coordinated. The MPU6050 IMU is disabled, so it does not feed the EKF.
+The EKF publishes filtered odometry on /odom and owns the odom → base_footprint transform. Nav2 uses /odom.
+
+Before navigation, verify that both machines can communicate over ROS 2 and that the EKF receives /wheel/odom. Ensure there is only one publisher for odom → base_footprint.
 
 ## 8. Coordinate Frames
 
