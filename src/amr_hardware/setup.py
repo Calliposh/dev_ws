@@ -23,6 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
             'nano_bridge = amr_hardware.nano_bridge:main',
+            'wheel_odom = amr_hardware.wheel_odom:main',
         ],
     },
 )
