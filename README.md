@@ -71,12 +71,11 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-## Validation Status
+## Project Deliverables
 
-The repository contains the configuration and launch files for the
-AMR's hardware interface, physical mapping, localization, and navigation.
-
-The latest EKF integration has been reviewed at the source level but
-has not been runtime-tested after these changes. Before deployment,
-build the workspace in a ROS 2 Humble environment and verify the EKF,
-distributed ROS 2 communication, TF tree, and autonomous navigation.
+- ROS 2 robot description and simulation resources.
+- Arduino-based sensor interface and wheel-encoder odometry.
+- YDLIDAR integration and physical SLAM mapping configuration.
+- SLAM Toolbox and Nav2 localization and navigation configuration.
+- Robot Localization EKF configuration and launch integration.
+- Physical robot bring-up documentation and workspace build instructions.
