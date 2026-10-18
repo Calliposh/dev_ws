@@ -158,21 +158,34 @@ SLAM Toolbox, AMCL and Nav2 run on the laptop, while the Jetson Nano runs the ha
 
 ### 7.1 Start SLAM Toolbox
 
-Before starting SLAM, confirm that the Jetson is publishing LiDAR scans and wheel odometry and that the robot description and transforms are available.
+SLAM Toolbox runs on the laptop. The Jetson Nano provides the LiDAR scans and wheel odometry over the ROS 2 network.
 
-On the laptop:
+Before starting SLAM, confirm that:
 
-```
+- The Jetson's Arduino bridge is publishing encoder data.
+- Wheel odometry is publishing on `/odom`.
+- The YDLIDAR driver is publishing scans on `/scan`.
+- The transform chain from `odom` to `base_footprint` and from `base_footprint` to `laser_frame` is available.
+
+On the laptop, source ROS 2 and configure the network:
+
+```bash
 source /opt/ros/humble/setup.bash
+source ~/dev_ws/install/setup.bash
 export ROS_DOMAIN_ID=10
 export ROS_LOCALHOST_ONLY=0
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-ros2 launch slam_toolbox online_async_launch.py use_sim_time:=false
 ```
 
-Keep SLAM Toolbox running while mapping. Drive the robot by teleoperation, open RViz, and check that the laser scan aligns with the robot and that the map updates as the robot moves.
+Start physical SLAM using the package launch file:
 
-**Important:** During mapping, do not start AMCL or run Nav2 localisation against the same map at the same time. SLAM Toolbox builds the map in this phase.
+```
+ros2 launch my_robot_description slam.launch.py
+```
+
+Leave SLAM running while driving the robot by teleportation. InRviz, verify that the laser scan aligns with the robot and that the occupancy grid updates as the robot moves around.
+
+Do not start AMCL or Nav2 during this mapping phase. SLAM Toolbox is responsible for generating the map.
 
 ### 7.2 Save the map
 
