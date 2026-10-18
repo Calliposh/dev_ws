@@ -183,7 +183,7 @@ Start physical SLAM using the package launch file:
 ros2 launch my_robot_description slam.launch.py
 ```
 
-Leave SLAM running while driving the robot by teleportation. In Rviz, verify that the laser scan aligns with the robot and that the occupancy grid updates as the robot moves around.
+Leave SLAM running while driving the robot by teleoperation. In RViz, verify that the laser scan aligns with the robot and that the occupancy grid updates as the robot moves around.
 
 Do not start AMCL or Nav2 during this mapping phase. SLAM Toolbox is responsible for generating the map.
 
