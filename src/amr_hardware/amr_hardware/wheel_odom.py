@@ -154,7 +154,7 @@ class WheelOdometry(Node):
         odom.pose.covariance[35] = 0.05
 
         odom.twist.covariance[0] = 0.02
-        odom.twist.covariance[1] = 0.02
+        odom.twist.covariance[7] = 0.02
         odom.twist.covariance[35] = 0.05
 
         self.odom_pub.publish(odom)
