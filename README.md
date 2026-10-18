@@ -1,6 +1,3 @@
-This is a startup project repository in for an AMR 
-this was done with our blood, sweat and tears.
-
 # Autonomous Mobile Robot (AMR)
 
 ROS 2 workspace for an autonomous mobile robot prototype with wheel
