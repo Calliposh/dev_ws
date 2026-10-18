@@ -22,6 +22,7 @@ class WheelOdometry(Node):
         self.declare_parameter('left_encoder_sign', -1.0)
         self.declare_parameter('right_encoder_sign', 1.0)
         self.declare_parameter('publish_tf', True)
+        self.declare_parameter('odom_topic', '/odom')
 
         self.wheel_radius = float(
             self.get_parameter('wheel_radius').value
@@ -49,8 +50,10 @@ class WheelOdometry(Node):
         self.y = 0.0
         self.yaw = 0.0
 
+        odom_topic = self.get_parameter('odom_topic').value
+
         self.odom_pub = self.create_publisher(
-            Odometry, '/odom', 10
+            Odometry, odom_topic, 10
         )
 
         self.tf_broadcaster = TransformBroadcaster(self)
